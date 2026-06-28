@@ -6,6 +6,7 @@ import 'recent_screen.dart';
 import 'downloads_screen.dart';
 import 'search_screen.dart';
 import 'app_manager_screen.dart';
+import 'settings_screen.dart';
 
 /// The GRABBIT Shell — bottom navigation that hosts all main screens.
 /// 5 tabs: Recent, Downloads, Search, Apps, Settings.
@@ -27,7 +28,7 @@ class _GrabbitShellState extends State<GrabbitShell> {
     DownloadsScreen(),
     SearchScreen(),
     AppManagerScreen(),
-    _SettingsPlaceholder(),
+    SettingsScreen(),
   ];
 
   @override
@@ -107,69 +108,6 @@ class _GrabbitShellState extends State<GrabbitShell> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Placeholder for the settings screen.
-class _SettingsPlaceholder extends StatelessWidget {
-  const _SettingsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: GrabbitColors.void_,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-              Text(
-                'Settings',
-                style: Theme.of(context).textTheme.displaySmall,
-              ),
-              const SizedBox(height: 24),
-              _settingsItem(context, 'Index neu aufbauen', 'Vollständiger MediaStore-Scan', Icons.refresh_rounded),
-              _settingsItem(context, 'Reduce Motion', 'Animationen minimieren', Icons.motion_photos_off_rounded),
-              _settingsItem(context, 'Standard-Sortierung', 'Neueste zuerst', Icons.sort_rounded),
-              _settingsItem(context, 'Sharesheet-Favoriten', '5 Ziele konfiguriert', Icons.share_rounded),
-              _settingsItem(context, 'Export / Backup', 'Index als JSON exportieren', Icons.save_alt_rounded),
-              _settingsItem(context, 'Über GRABBIT', 'v0.1.0 · GPL-3.0 · FLUBBER Design', Icons.info_outline_rounded),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _settingsItem(BuildContext context, String title, String subtitle, IconData icon) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: GrabbitColors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: GrabbitColors.border),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: GrabbitColors.t2),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: GrabbitColors.t1)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 11, color: GrabbitColors.t3)),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, size: 18, color: GrabbitColors.t4),
-        ],
       ),
     );
   }
