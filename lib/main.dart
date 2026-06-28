@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'screens/recent_screen.dart';
+import 'screens/grabbit_shell.dart';
 import 'theme/grabbit_theme.dart';
 
 void main() {
-  runApp(const GrabbitApp());
+  runApp(const ProviderScope(child: GrabbitApp()));
 }
 
 /// GRABBIT — Android file manager for people who need to find, select,
@@ -18,7 +19,7 @@ class GrabbitApp extends StatelessWidget {
       title: 'GRABBIT',
       debugShowCheckedModeBanner: false,
       theme: GrabbitTheme.dark,
-      home: const RecentScreen(),
+      home: const GrabbitShell(),
     );
   }
 }
