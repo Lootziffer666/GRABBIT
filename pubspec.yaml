@@ -1,0 +1,54 @@
+name: grabbit
+description: >-
+  Android file manager for people who need to find, select, bundle, and
+  reuse work artifacts. Newest files first. Everything-style instant search.
+  FLUBBER design system. GPL-3.0.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Core engine (pure Dart, no Flutter deps)
+  grabbit_core:
+    path: grabbit_core
+
+  # State management (same as KYUUBI/App-Lab)
+  flutter_riverpod: ^2.5.0
+
+  # Navigation
+  go_router: ^14.0.0
+
+  # Typography (Lilita One, Barlow, JetBrains Mono)
+  google_fonts: ^6.2.1
+
+  # Database / Index
+  sqflite: ^2.3.0
+  path_provider: ^2.1.0
+  path: ^1.9.0
+
+  # Models
+  freezed_annotation: ^2.4.0
+  json_annotation: ^4.9.0
+
+  # Utils
+  collection: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code generation
+  build_runner: ^2.4.9
+  freezed: ^2.4.7
+  json_serializable: ^6.8.0
+
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
