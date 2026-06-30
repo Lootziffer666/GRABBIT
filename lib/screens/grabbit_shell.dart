@@ -5,6 +5,7 @@ import '../theme/grabbit_colors.dart';
 import 'recent_screen.dart';
 import 'downloads_screen.dart';
 import 'search_screen.dart';
+import 'clipboard_screen.dart';
 import 'app_manager_screen.dart';
 import 'settings_screen.dart';
 
@@ -27,6 +28,7 @@ class _GrabbitShellState extends State<GrabbitShell> {
     RecentScreen(),
     DownloadsScreen(),
     SearchScreen(),
+    ClipboardScreen(),
     AppManagerScreen(),
     SettingsScreen(),
   ];
@@ -60,8 +62,9 @@ class _GrabbitShellState extends State<GrabbitShell> {
               _navItem(0, Icons.access_time_rounded, 'Recent'),
               _navItem(1, Icons.download_rounded, 'Downloads'),
               _navItem(2, Icons.search_rounded, 'Suche'),
-              _navItem(3, Icons.apps_rounded, 'Apps'),
-              _navItem(4, Icons.settings_rounded, 'Settings'),
+              _navItem(3, Icons.content_paste_rounded, 'Clipboard'),
+              _navItem(4, Icons.apps_rounded, 'Apps'),
+              _navItem(5, Icons.settings_rounded, 'Settings'),
             ],
           ),
         ),

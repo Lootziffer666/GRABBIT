@@ -46,6 +46,15 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Clipboard BroadcastReceiver for Tasker/MacroDroid -->
+        <receiver
+            android:name=".ClipboardReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.grabbit.CLIPBOARD_RECEIVED" />
+            </intent-filter>
+        </receiver>
     </application>
     <queries>
         <intent>

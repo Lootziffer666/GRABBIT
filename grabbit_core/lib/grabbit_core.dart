@@ -10,3 +10,4 @@ export 'src/file_action.dart';
 export 'src/file_source.dart';
 export 'src/file_state.dart';
 export 'src/index_schema.dart';
+export 'src/clipboard_entry.dart';
