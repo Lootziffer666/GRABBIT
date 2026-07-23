@@ -57,7 +57,6 @@ class _GrabbitShellState extends State<GrabbitShell> {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _navItem(0, Icons.access_time_rounded, 'Recent'),
               _navItem(1, Icons.download_rounded, 'Downloads'),
@@ -75,7 +74,8 @@ class _GrabbitShellState extends State<GrabbitShell> {
   Widget _navItem(int index, IconData icon, String label) {
     final active = _currentIndex == index;
 
-    return GestureDetector(
+    return Expanded(
+      child: GestureDetector(
       onTap: () {
         if (_currentIndex != index) {
           HapticFeedback.selectionClick();
@@ -85,7 +85,7 @@ class _GrabbitShellState extends State<GrabbitShell> {
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
         decoration: BoxDecoration(
           color: active
               ? GrabbitColors.turquoise.withAlpha(20)
@@ -111,6 +111,7 @@ class _GrabbitShellState extends State<GrabbitShell> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -2,6 +2,8 @@ package com.grabbit.grabbit
 
 import android.app.Activity
 import android.content.ContentUris
+import android.content.Intent
+import android.provider.Settings
 import android.database.ContentObserver
 import android.net.Uri
 import android.os.Build
@@ -85,6 +87,9 @@ class GrabbitIndexChannel(
                         }
                     }.start()
                 }
+                "openApp" -> result.success(openApp(call.argument<String>("package")))
+                "openAppDetails" -> result.success(openAppDetails(call.argument<String>("package")))
+                "uninstallApp" -> result.success(uninstallApp(call.argument<String>("package")))
                 "deleteFile" -> {
                     val path = call.argument<String>("path")
                     if (path != null) {
@@ -266,13 +271,33 @@ class GrabbitIndexChannel(
                 "package" to pkg.packageName,
                 "label" to label,
                 "installed" to installTime,
-                "last_used" to lastUpdate,
+                "last_used" to null,
                 "is_system" to if (isSystem) 1 else 0,
                 "size_bytes" to 0L, // requires StorageStatsManager, expensive
             ))
         }
 
         return apps
+    }
+
+    private fun openApp(packageName: String?): Boolean {
+        if (packageName == null) return false
+        val intent = activity.packageManager.getLaunchIntentForPackage(packageName) ?: return false
+        activity.startActivity(intent)
+        return true
+    }
+
+    private fun openAppDetails(packageName: String?): Boolean {
+        if (packageName == null) return false
+        activity.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.parse("package:$packageName")))
+        return true
+    }
+
+    private fun uninstallApp(packageName: String?): Boolean {
+        if (packageName == null) return false
+        activity.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName")))
+        return true
     }
 
     // ── File Operations ───────────────────────────────────────────────────

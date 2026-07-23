@@ -74,6 +74,15 @@ class PlatformIndexService {
     return result.map((m) => m.cast<String, dynamic>()).toList();
   }
 
+  Future<bool> openApp(String packageName) async =>
+      await _methodChannel.invokeMethod<bool>('openApp', {'package': packageName}) ?? false;
+
+  Future<bool> openAppDetails(String packageName) async =>
+      await _methodChannel.invokeMethod<bool>('openAppDetails', {'package': packageName}) ?? false;
+
+  Future<bool> uninstallApp(String packageName) async =>
+      await _methodChannel.invokeMethod<bool>('uninstallApp', {'package': packageName}) ?? false;
+
   /// Delete a file (SAF-aware).
   Future<bool> deleteFile(String path) async {
     final result =

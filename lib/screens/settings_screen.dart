@@ -113,21 +113,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 20),
 
-            // ── SHARESHEET ──
-            _sectionLabel('SHARESHEET'),
-            _actionTile(
-              icon: Icons.star_rounded,
-              iconColor: GrabbitColors.orange,
-              title: 'Sharesheet-Favoriten',
-              subtitle: '5 Ziele konfiguriert',
-              onTap: () => _showSharesheetConfig(),
-            ),
-            _actionTile(
-              icon: Icons.visibility_off_rounded,
-              iconColor: GrabbitColors.t3,
-              title: 'Ausgeblendete Ziele',
-              subtitle: '2 Apps ausgeblendet',
-              onTap: () {},
+            // Android's Sharesheet is owned by the system. GRABBIT does not
+            // claim to configure or hide its targets.
+            _sectionLabel('SYSTEM-INTEGRATION'),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Text(
+                'Das Teilen-Menü wird von Android verwaltet. GRABBIT verändert keine Apps oder Favoriten darin.',
+                style: TextStyle(fontSize: 12, color: GrabbitColors.t3, height: 1.4),
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -360,12 +354,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  void _showSharesheetConfig() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sharesheet-Konfiguration → v0.2')),
     );
   }
 

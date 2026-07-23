@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'screens/grabbit_shell.dart';
 import 'theme/grabbit_theme.dart';
+import 'services/clipboard_service.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  ClipboardService.instance.initialize();
   runApp(const ProviderScope(child: GrabbitApp()));
 }
 

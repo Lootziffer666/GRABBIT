@@ -5,6 +5,8 @@ import 'package:grabbit_core/grabbit_core.dart';
 
 import '../animations/scroll_reveal.dart';
 import '../theme/grabbit_colors.dart';
+import '../services/clipboard_database.dart';
+import '../services/clipboard_service.dart';
 
 /// GRABBIT Persistent Clipboard — never lose copied text again.
 ///
@@ -57,13 +59,24 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
   ClipFilter _filter = ClipFilter.all;
   bool _searchActive = false;
 
-  // Demo data (will be ClipboardDatabase-driven via Riverpod)
-  late List<ClipboardEntry> _entries;
+  final List<ClipboardEntry> _entries = [];
+  String _captureStatus = 'Nur während GRABBIT geöffnet ist';
 
   @override
   void initState() {
     super.initState();
-    _entries = _generateDemoEntries();
+    _loadEntries();
+  }
+
+  Future<void> _loadEntries() async {
+    final entries = await ClipboardDatabase.instance.getRecent(limit: 500);
+    if (!mounted) return;
+    setState(() {
+      _entries
+        ..clear()
+        ..addAll(entries);
+      _captureStatus = ClipboardService.instance.captureStatus;
+    });
   }
 
   @override
@@ -116,7 +129,7 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Tasker aktiv',
+                          _captureStatus,
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -385,31 +398,15 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
 
   void _pastEntry(ClipboardEntry entry) async {
     HapticFeedback.mediumImpact();
-
-    if (entry.exceedsAndroidLimit) {
-      // Show warning + paste first 512KB
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              '${entry.sizeFormatted} — erste 512KB gepastet. '
-              'Shizuku für volle Größe nutzen.'),
-        ),
-      );
-    }
-
-    await Clipboard.setData(ClipboardData(
-        text: entry.content.length > 512 * 512
-            ? entry.content.substring(0, 512 * 512)
-            : entry.content));
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gepastet: ${entry.content.length} Zeichen'),
-          duration: const Duration(milliseconds: 1200),
-        ),
-      );
-    }
+    final result = await ClipboardService.instance.pasteToClipboard(entry);
+    if (!mounted) return;
+    final message = switch (result) {
+      PasteResult.fullPaste => 'Vollständig kopiert: ${entry.content.length} Zeichen',
+      PasteResult.passagePaste =>
+        '${ClipboardService.splitIntoPassages(entry.content).length} Passagen an die Zwischenablage gesendet. Die letzte ist jetzt aktiv; vorherige können in Gboard gespeichert sein.',
+      PasteResult.failed => 'Kopieren fehlgeschlagen',
+    };
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _showActions(ClipboardEntry entry) {
@@ -482,6 +479,19 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
                 Navigator.pop(context);
               },
             ),
+            if (entry.exceedsAndroidLimit)
+              ListTile(
+                leading: const Icon(Icons.call_split_rounded,
+                    color: GrabbitColors.turquoise),
+                title: const Text('In Passagen an Gboard senden'),
+                subtitle: Text(
+                  '${ClipboardService.splitIntoPassages(entry.content).length} Passagen; die letzte bleibt aktiv',
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pastEntry(entry);
+                },
+              ),
             ListTile(
               leading:
                   const Icon(Icons.share_rounded, color: GrabbitColors.t2),
@@ -512,37 +522,17 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
   }
 
   void _manualCapture() async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    if (data?.text != null && data!.text!.isNotEmpty) {
-      final content = data.text!;
-      setState(() {
-        _entries.insert(
-          0,
-          ClipboardEntry(
-            id: DateTime.now().millisecondsSinceEpoch,
-            content: content,
-            type: ClipType.detect(content),
-            timestamp: DateTime.now().millisecondsSinceEpoch,
-            sizeBytes: content.length * 2,
-            preview: content.length > 200
-                ? content.substring(0, 200)
-                : content,
-          ),
-        );
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('Erfasst: ${content.length} Zeichen')),
-        );
-      }
+    final entry = await ClipboardService.instance.captureCurrentClipboard();
+    if (!mounted) return;
+    if (entry != null) {
+      setState(() => _entries.insert(0, entry));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erfasst: ${entry.content.length} Zeichen')),
+      );
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Clipboard ist leer')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Clipboard leer oder bereits erfasst')),
+      );
     }
   }
 
@@ -563,9 +553,8 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              'Konfiguriere Tasker/MacroDroid:\n'
-              'Event: Clipboard Changed\n'
-              'Action: Intent → com.grabbit.CLIPBOARD_RECEIVED',
+              'Tippe auf +, um den aktuellen Inhalt zu erfassen. '
+              'Android erlaubt den automatischen Zugriff nur, während GRABBIT geöffnet ist.',
               style: TextStyle(
                   fontSize: 12, color: GrabbitColors.t3, height: 1.6),
               textAlign: TextAlign.center,
@@ -602,18 +591,4 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
     };
   }
 
-  List<ClipboardEntry> _generateDemoEntries() {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    return [
-      ClipboardEntry(id: 1, content: 'https://github.com/lootziffer666/GRABBIT', type: ClipType.url, timestamp: now - 60000, sizeBytes: 80, sourceApp: 'com.android.chrome', sourceLabel: 'Chrome', preview: 'https://github.com/lootziffer666/GRABBIT'),
-      ClipboardEntry(id: 2, content: 'flutter pub get && flutter run', type: ClipType.code, timestamp: now - 300000, sizeBytes: 62, sourceLabel: 'Terminal', preview: 'flutter pub get && flutter run'),
-      ClipboardEntry(id: 3, content: '{"model":"gemini-2.0-flash","temperature":0.7,"max_tokens":4096,"messages":[{"role":"user","content":"Erkläre mir die FLUBBER Motion Grammar"}]}', type: ClipType.json, timestamp: now - 900000, sizeBytes: 280, sourceLabel: 'ChatGPT', preview: '{"model":"gemini-2.0-flash","temperature":0.7,...}', pinned: true),
-      ClipboardEntry(id: 4, content: 'Der Index wird einmal aufgebaut und dann nur noch inkrementell aktualisiert. Das Everything-Prinzip bedeutet: nie wieder wartet der Nutzer auf Filesystem-Reads. Alle Queries laufen gegen SQLite mit FTS5 — Ergebnisse in unter 5ms. Der ContentObserver auf MediaStore.Files fängt Downloads, Screenshots, Kamera, App-Exports automatisch ab. Beim App-Start läuft ein schneller Delta-Check.', type: ClipType.multiline, timestamp: now - 3600000, sizeBytes: 820, sourceLabel: 'Kiro', preview: 'Der Index wird einmal aufgebaut und dann nur noch inkrementell aktualisiert...', favorite: true),
-      ClipboardEntry(id: 5, content: '/storage/emulated/0/Download/Rechnung_2026.pdf', type: ClipType.path, timestamp: now - 7200000, sizeBytes: 96, sourceLabel: 'GRABBIT'),
-      ClipboardEntry(id: 6, content: 'user@example.com', type: ClipType.email, timestamp: now - 14400000, sizeBytes: 32, sourceLabel: 'Gmail'),
-      ClipboardEntry(id: 7, content: '+49 171 123 4567', type: ClipType.number, timestamp: now - 28800000, sizeBytes: 32, sourceLabel: 'Kontakte'),
-      ClipboardEntry(id: 8, content: 'import \'package:flutter/material.dart\';\nimport \'package:flutter_riverpod/flutter_riverpod.dart\';\n\nfinal indexStateProvider = StateNotifierProvider<IndexStateNotifier, IndexState>((ref) {\n  final db = ref.watch(indexDatabaseProvider);\n  return IndexStateNotifier(db);\n});', type: ClipType.code, timestamp: now - 43200000, sizeBytes: 520, sourceLabel: 'VS Code', preview: 'import \'package:flutter/material.dart\';...'),
-      ClipboardEntry(id: 9, content: 'A' * 600000, type: ClipType.multiline, timestamp: now - 86400000, sizeBytes: 1200000, sourceLabel: 'PDF Export', preview: 'AAAAAAAAAA... (600.000 Zeichen)'),
-    ];
-  }
 }

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../animations/scroll_reveal.dart';
 import '../theme/grabbit_colors.dart';
+import '../services/platform_index_service.dart';
 
 /// App Manager Screen — not a launcher, not a cleaner.
 /// A tool for understanding what's installed, what's unused, what opens what.
@@ -68,7 +69,7 @@ enum AppTriage {
       };
 }
 
-/// Demo app data (will be replaced by platform channel data).
+/// Metadata reported by Android's PackageManager.
 class InstalledApp {
   final String package;
   final String label;
@@ -91,6 +92,7 @@ class InstalledApp {
   });
 
   String get sizeFormatted {
+    if (sizeBytes <= 0) return 'Größe unbekannt';
     if (sizeBytes < 1024 * 1024) {
       return '${(sizeBytes / 1024).toStringAsFixed(0)} KB';
     }
@@ -109,12 +111,38 @@ class InstalledApp {
 
 class _AppManagerScreenState extends State<AppManagerScreen> {
   AppFilter _filter = AppFilter.all;
-  late List<InstalledApp> _apps;
+  final List<InstalledApp> _apps = [];
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _apps = _generateDemoApps();
+    _loadApps();
+  }
+
+
+  Future<void> _loadApps() async {
+    try {
+      final rows = await PlatformIndexService.instance.getInstalledApps();
+      if (!mounted) return;
+      setState(() {
+        _apps
+          ..clear()
+          ..addAll(rows.map((row) => InstalledApp(
+            package: row['package'] as String,
+            label: row['label'] as String,
+            installed: (row['installed'] as num).toInt(),
+            lastUsed: (row['last_used'] as num?)?.toInt(),
+            sizeBytes: (row['size_bytes'] as num?)?.toInt() ?? 0,
+            isSystem: row['is_system'] == 1,
+            neverOpened: row['last_used'] == null,
+          )));
+        _loading = false;
+      });
+    } catch (error) {
+      if (mounted) setState(() { _loading = false; _error = error.toString(); });
+    }
   }
 
   @override
@@ -212,7 +240,13 @@ class _AppManagerScreenState extends State<AppManagerScreen> {
 
             // App list
             Expanded(
-              child: ListView.builder(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(child: Text('Apps konnten nicht geladen werden: $_error'))
+                      : filtered.isEmpty
+                          ? const Center(child: Text('Keine Apps gefunden'))
+                          : ListView.builder(
                 padding: const EdgeInsets.only(bottom: 80),
                 itemCount: filtered.length,
                 itemBuilder: (_, i) => ScrollReveal(
@@ -358,10 +392,9 @@ class _AppManagerScreenState extends State<AppManagerScreen> {
             Text(app.label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: GrabbitColors.t1)),
             Text(app.package, style: GoogleFonts.jetBrainsMono(fontSize: 10, color: GrabbitColors.t3)),
             const SizedBox(height: 16),
-            ListTile(leading: const Icon(Icons.open_in_new_rounded, color: GrabbitColors.turquoise), title: const Text('Öffnen'), onTap: () => Navigator.pop(context)),
-            ListTile(leading: const Icon(Icons.info_outline_rounded, color: GrabbitColors.t2), title: const Text('App-Details (System)'), onTap: () => Navigator.pop(context)),
-            ListTile(leading: const Icon(Icons.share_rounded, color: GrabbitColors.t2), title: const Text('APK teilen'), onTap: () => Navigator.pop(context)),
-            ListTile(leading: const Icon(Icons.delete_outline_rounded, color: GrabbitColors.red), title: const Text('Deinstallieren', style: TextStyle(color: GrabbitColors.red)), onTap: () => Navigator.pop(context)),
+            ListTile(leading: const Icon(Icons.open_in_new_rounded, color: GrabbitColors.turquoise), title: const Text('Öffnen'), onTap: () { Navigator.pop(context); PlatformIndexService.instance.openApp(app.package); }),
+            ListTile(leading: const Icon(Icons.info_outline_rounded, color: GrabbitColors.t2), title: const Text('App-Details (System)'), onTap: () { Navigator.pop(context); PlatformIndexService.instance.openAppDetails(app.package); }),
+            ListTile(leading: const Icon(Icons.delete_outline_rounded, color: GrabbitColors.red), title: const Text('Deinstallieren', style: TextStyle(color: GrabbitColors.red)), onTap: () { Navigator.pop(context); PlatformIndexService.instance.uninstallApp(app.package); }),
             const SizedBox(height: 16),
           ],
         ),
@@ -384,19 +417,4 @@ class _AppManagerScreenState extends State<AppManagerScreen> {
     };
   }
 
-  List<InstalledApp> _generateDemoApps() {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    return [
-      InstalledApp(package: 'com.whatsapp', label: 'WhatsApp', installed: now - 365 * 86400000, lastUsed: now - 3600000, sizeBytes: 210 * 1024 * 1024),
-      InstalledApp(package: 'com.spotify.music', label: 'Spotify', installed: now - 200 * 86400000, lastUsed: now - 86400000, sizeBytes: 350 * 1024 * 1024),
-      InstalledApp(package: 'org.mozilla.firefox', label: 'Firefox', installed: now - 90 * 86400000, lastUsed: now - 7200000, sizeBytes: 180 * 1024 * 1024),
-      InstalledApp(package: 'com.example.neverused', label: 'PDF Expert Pro', installed: now - 60 * 86400000, neverOpened: true, sizeBytes: 95 * 1024 * 1024),
-      InstalledApp(package: 'com.some.scanner', label: 'Document Scanner Plus', installed: now - 45 * 86400000, neverOpened: true, sizeBytes: 42 * 1024 * 1024),
-      InstalledApp(package: 'com.game.puzzle', label: 'Puzzle Quest', installed: now - 120 * 86400000, lastUsed: now - 90 * 86400000, sizeBytes: 280 * 1024 * 1024),
-      InstalledApp(package: 'com.grabbit.grabbit', label: 'GRABBIT', installed: now - 86400000, lastUsed: now - 1800000, sizeBytes: 24 * 1024 * 1024),
-      InstalledApp(package: 'com.android.chrome', label: 'Chrome', installed: now - 730 * 86400000, lastUsed: now - 3600000, sizeBytes: 420 * 1024 * 1024, isSystem: true),
-      InstalledApp(package: 'com.android.vending', label: 'Play Store', installed: now - 730 * 86400000, lastUsed: now - 7200000, sizeBytes: 150 * 1024 * 1024, isSystem: true),
-      InstalledApp(package: 'com.random.tool', label: 'WiFi Analyzer', installed: now - 3 * 86400000, neverOpened: true, sizeBytes: 15 * 1024 * 1024),
-    ];
-  }
 }
