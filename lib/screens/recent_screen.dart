@@ -5,6 +5,7 @@ import 'package:grabbit_core/grabbit_core.dart';
 
 import '../animations/scroll_reveal.dart';
 import '../theme/grabbit_colors.dart';
+import '../services/platform_index_service.dart';
 import '../widgets/file_card.dart';
 import '../widgets/search_bar_widget.dart';
 import '../widgets/category_chip.dart';
@@ -30,8 +31,9 @@ class _RecentScreenState extends State<RecentScreen> {
   bool _multiSelectActive = false;
   final Set<int> _selectedFileIds = {};
 
-  // Demo data
-  late final List<IndexedFile> _demoFiles;
+  final List<IndexedFile> _files = [];
+  bool _scanning = true;
+  String? _scanError;
 
   // Text-viewable extensions
   static const _textExtensions = {
@@ -43,13 +45,40 @@ class _RecentScreenState extends State<RecentScreen> {
   @override
   void initState() {
     super.initState();
-    _demoFiles = _generateDemoFiles();
+    _loadFiles();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadFiles() async {
+    setState(() { _scanning = true; _scanError = null; });
+    try {
+      final scanned = await PlatformIndexService.instance.scanAll();
+      if (!mounted) return;
+      setState(() {
+        _files
+          ..clear()
+          ..addAll(scanned.indexed.map((item) => IndexedFile(
+            id: item.$1 + 1,
+            path: item.$2.path,
+            name: item.$2.name,
+            ext: item.$2.ext,
+            size: item.$2.size,
+            modified: item.$2.modified,
+            created: item.$2.created,
+            parent: item.$2.parent,
+            source: item.$2.source,
+            mime: item.$2.mime,
+          )));
+        _scanning = false;
+      });
+    } catch (error) {
+      if (mounted) setState(() { _scanning = false; _scanError = error.toString(); });
+    }
   }
 
   // ── Multi-Select Logic ──────────────────────────────────────────────────
@@ -211,7 +240,7 @@ class _RecentScreenState extends State<RecentScreen> {
 
   void _batchShare() {
     if (_selectedFileIds.length == 1) {
-      final file = _demoFiles.firstWhere((f) => f.id == _selectedFileIds.first);
+      final file = _files.firstWhere((f) => f.id == _selectedFileIds.first);
       _showSharesheet(file);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -331,7 +360,9 @@ class _RecentScreenState extends State<RecentScreen> {
             style: GoogleFonts.lilitaOne(fontSize: 28, color: GrabbitColors.t1),
           ),
           const Spacer(),
-          Container(
+          GestureDetector(
+            onTap: _loadFiles,
+            child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: GrabbitColors.turquoise.withAlpha(20),
@@ -339,11 +370,12 @@ class _RecentScreenState extends State<RecentScreen> {
               border: Border.all(color: GrabbitColors.turquoise.withAlpha(60)),
             ),
             child: Text(
-              '${_demoFiles.length} Dateien',
+              _scanning ? 'Scanne…' : '${_files.length} Dateien',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 11, fontWeight: FontWeight.w700, color: GrabbitColors.turquoise,
               ),
             ),
+          ),
           ),
         ],
       ),
@@ -433,7 +465,7 @@ class _RecentScreenState extends State<RecentScreen> {
   }
 
   List<IndexedFile> _filteredFiles() {
-    var files = _demoFiles;
+    var files = _files;
     if (_selectedCategory != null) {
       files = files.where((f) => f.category == _selectedCategory).toList();
     }

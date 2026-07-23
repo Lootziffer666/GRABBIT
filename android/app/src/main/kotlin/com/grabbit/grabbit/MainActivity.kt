@@ -8,5 +8,6 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         // Register platform channels
         GrabbitIndexChannel(this, flutterEngine).register()
+        GrabbitClipboardChannel(this, flutterEngine).register()
     }
 }
